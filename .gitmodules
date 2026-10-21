@@ -36,7 +36,7 @@
 	url = https://github.com/UniXNU/NativeRamBlock.git
 [submodule "drivers/NativeUfs"]
 	path = drivers/NativeUfs
-	url = https://github.com/UniXNU/NativeUfs.git
+	url = https://github.com/pubglite55/NativeUfs.git
 [submodule "drivers/NativeVirtioBlock"]
 	path = drivers/NativeVirtioBlock
 	url = https://github.com/UniXNU/NativeVirtioBlock.git
