@@ -10,6 +10,7 @@
 #include "Internal.h"
 
 #include <Library/FdtLib.h>
+#include <Guid/FileSystemInfo.h>
 
 //
 // UniXNU targets AArch64 UEFI only.
@@ -1519,6 +1520,9 @@ TryVolume (
 }
 
 VOID
+STATIC CHAR8   mScannedVolumes[96];
+STATIC UINTN   mVolumeCount;
+
 UniXNUConfigLoad (
   IN  EFI_HANDLE  ImageHandle,
   OUT UNIXNU_CONFIG   *Config
@@ -1530,6 +1534,7 @@ UniXNUConfigLoad (
   UINTN                      Count;
   UINTN                      Index;
   BOOLEAN                    Loaded;
+  EFI_STATUS                 State;
   TOML_NODE                  *Root;
   CHAR8                      Error[96];
   CHAR16                     Label[64];
@@ -1547,10 +1552,51 @@ UniXNUConfigLoad (
   if (!Loaded && (Config->Error[0] == '\0')) {
     Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiSimpleFileSystemProtocolGuid, NULL, &Count, &Handles);
     if (!EFI_ERROR (Status)) {
+      CHAR8  Volumes[96];
+      UINTN  Used = 0;
+
+      Volumes[0] = '\0';
       for (Index = 0; Index < Count && !Loaded && Config->Error[0] == '\0'; Index++) {
+        EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
+        EFI_FILE                         *Root;
+
+        if (!EFI_ERROR (gBS->HandleProtocol (Handles[Index], &gEfiSimpleFileSystemProtocolGuid, (VOID **)&Fs)) &&
+            !EFI_ERROR (Fs->OpenVolume (Fs, &Root)))
+        {
+          EFI_FILE_SYSTEM_INFO  *Info;
+          UINTN                 Size = 0;
+
+          State = Root->GetInfo (Root, &gEfiFileSystemInfoGuid, &Size, NULL);
+          if (State == EFI_BUFFER_TOO_SMALL) {
+            Info = AllocatePool (Size);
+            if ((Info != NULL) &&
+                !EFI_ERROR (Root->GetInfo (Root, &gEfiFileSystemInfoGuid, &Size, (VOID *)Info)))
+            {
+              CHAR8  Label[24];
+              UINTN  Position;
+
+              for (Position = 0; (Position < sizeof (Label) - 1) && (Info->VolumeLabel[Position] != L'\0'); Position++) {
+                Label[Position] = (CHAR8)Info->VolumeLabel[Position];
+              }
+
+              Label[Position] = '\0';
+              Used += (UINTN)AsciiSPrint (Volumes + Used, sizeof (Volumes) - Used,
+                (Used == 0) ? "%a" : ",%a", Label);
+            }
+
+            if (Info != NULL) {
+              FreePool (Info);
+            }
+          }
+
+          Root->Close (Root);
+        }
+
         Loaded = TryVolume (Config, Handles[Index]);
       }
 
+      AsciiStrCpyS (mScannedVolumes, sizeof (mScannedVolumes), Volumes);
+      mVolumeCount = Count;
       FreePool (Handles);
     }
   }
@@ -1580,7 +1626,10 @@ UniXNUConfigLoad (
       // Only the actions are left. Say so instead of showing a menu that
       // looks complete.
       //
-      AsciiStrCpyS (Config->Notice, sizeof (Config->Notice), "no boot entry found");
+      AsciiSPrint (Config->Notice, sizeof (Config->Notice), "no boot entry found (%u vol%s%s)",
+        (UINT32)mVolumeCount,
+        (mScannedVolumes[0] != '\0') ? ": " : "",
+        mScannedVolumes);
       UniXNULog ("config: no boot entry found");
     }
 
