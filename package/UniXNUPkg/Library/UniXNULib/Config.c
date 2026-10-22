@@ -1524,7 +1524,7 @@ STATIC EFI_GUID  mShngMemVendorGuid = {
   0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
 };
 
-STATIC CHAR8   mScannedVolumes[96];
+STATIC CHAR8   mScannedVolumes[24];
 STATIC UINTN   mVolumeCount;
 
 VOID
@@ -1631,15 +1631,16 @@ UniXNUConfigLoad (
       // Only the actions are left. Say so instead of showing a menu that
       // looks complete.
       //
-      UINT8   BmSt[8];
+      UINT8   BmSt[24];
       UINTN   BmStSize = sizeof (BmSt);
-      BOOLEAN HaveBmSt = !EFI_ERROR (gRT->GetVariable (L"ShngMemSt", &mShngMemVendorGuid, NULL, &BmStSize, BmSt));
+      BOOLEAN HaveBmSt;
 
-      AsciiSPrint (Config->Notice, sizeof (Config->Notice), "no boot entry found (%u vol%s%s bm=%a)",
+      ZeroMem (BmSt, sizeof (BmSt));
+      HaveBmSt = !EFI_ERROR (gRT->GetVariable (L"ShngMemSt", &mShngMemVendorGuid, NULL, &BmStSize, BmSt));
+      AsciiSPrint (Config->Notice, sizeof (Config->Notice), "bm=%a, %u vol: %a",
+        HaveBmSt ? (CONST CHAR8 *)BmSt : "?",
         (UINT32)mVolumeCount,
-        (mScannedVolumes[0] != '\0') ? ": " : "",
-        mScannedVolumes,
-        HaveBmSt ? (CONST CHAR8 *)BmSt : "?");
+        mScannedVolumes);
       UniXNULog ("config: no boot entry found");
     }
 
