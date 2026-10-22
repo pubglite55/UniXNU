@@ -47,6 +47,7 @@
 
 [Guids]
   gEfiFileInfoGuid                ## CONSUMES
+  gEfiFileSystemInfoGuid          ## CONSUMES
   gFdtTableGuid                   ## SOMETIMES_CONSUMES ## SOMETIMES_PRODUCES
   gLinuxEfiInitrdMediaGuid        ## SOMETIMES_PRODUCES
   gUniXNUBlockSliceGuid        ## SOMETIMES_PRODUCES
