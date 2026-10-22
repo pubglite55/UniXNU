@@ -1519,10 +1519,10 @@ TryVolume (
   return TRUE;
 }
 
-VOID
 STATIC CHAR8   mScannedVolumes[96];
 STATIC UINTN   mVolumeCount;
 
+VOID
 UniXNUConfigLoad (
   IN  EFI_HANDLE  ImageHandle,
   OUT UNIXNU_CONFIG   *Config
