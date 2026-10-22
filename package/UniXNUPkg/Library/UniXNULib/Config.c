@@ -11,6 +11,7 @@
 
 #include <Library/FdtLib.h>
 #include <Guid/FileSystemInfo.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 //
 // UniXNU targets AArch64 UEFI only.
@@ -1519,6 +1520,10 @@ TryVolume (
   return TRUE;
 }
 
+STATIC CONST EFI_GUID  mShngMemVendorGuid = {
+  0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
+};
+
 STATIC CHAR8   mScannedVolumes[96];
 STATIC UINTN   mVolumeCount;
 
@@ -1626,10 +1631,15 @@ UniXNUConfigLoad (
       // Only the actions are left. Say so instead of showing a menu that
       // looks complete.
       //
-      AsciiSPrint (Config->Notice, sizeof (Config->Notice), "no boot entry found (%u vol%s%s)",
+      UINT8   BmSt[8];
+      UINTN   BmStSize = sizeof (BmSt);
+      BOOLEAN HaveBmSt = !EFI_ERROR (gRT->GetVariable (L"ShngMemSt", &mShngMemVendorGuid, NULL, &BmStSize, BmSt));
+
+      AsciiSPrint (Config->Notice, sizeof (Config->Notice), "no boot entry found (%u vol%s%s bm=%a)",
         (UINT32)mVolumeCount,
         (mScannedVolumes[0] != '\0') ? ": " : "",
-        mScannedVolumes);
+        mScannedVolumes,
+        HaveBmSt ? (CONST CHAR8 *)BmSt : "?");
       UniXNULog ("config: no boot entry found");
     }
 
