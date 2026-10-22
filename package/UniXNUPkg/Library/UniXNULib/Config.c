@@ -1520,7 +1520,7 @@ TryVolume (
   return TRUE;
 }
 
-STATIC CONST EFI_GUID  mShngMemVendorGuid = {
+STATIC EFI_GUID  mShngMemVendorGuid = {
   0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
 };
 
