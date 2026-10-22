@@ -59,9 +59,11 @@ def write_volume(stage, image, label, size_mib):
     env = dict(os.environ, MTOOLS_SKIP_CHECK='1', TZ='UTC')
     # The volume also has to be publishable from a UFS partition, where the
     # block device reports 4096-byte logical blocks. A 512-byte FAT cannot be
-    # parsed through such a BlockIo, so format with 4 KiB sectors.
-    sectors = size_mib * 512
-    run(['mformat', '-C', '-F', '-S', '4096', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
+    # parsed through such a BlockIo, so record 4 KiB sectors in the BPB.
+    # -M is the soft (logical) sector size, which is what lands in the BPB;
+    # -S is the hard one and mformat rejects it for this geometry.
+    sectors = size_mib * 256
+    run(['mformat', '-C', '-F', '-M', '4096', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
     for entry in sorted(stage.iterdir()):
         run(['mcopy', '-i', image, '-s', '-Q', '-m', entry, '::/'], env=env, capture=True)
 
