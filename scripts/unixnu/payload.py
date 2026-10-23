@@ -154,6 +154,8 @@ def build(ctx, kernel=None):
         command.append('--trust-cache')
     if adt.get('ipad_identity'):
         command.append('--ipad-identity')
+    if adt.get('iphone_identity'):
+        command.append('--iphone-identity')
     run(command, cwd=ctx.tree, env=dict(os.environ, UNIXNU_UEFI=str(ctx.uefi or '')), log_file=ctx.logs / 'payload-adt.log')
     initrd = 'initrd = "Payloads/scratch-data.img"\n' if data else ''
     loader = '' if spec.get('loader', 'firmware') == 'firmware' else '[[driver]]\npath = "Payloads/DarwinBoot.efi"\n'
