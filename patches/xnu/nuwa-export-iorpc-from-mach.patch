@@ -1,0 +1,25 @@
+diff --git a/libkern/c++/OSObject.cpp b/libkern/c++/OSObject.cpp
+--- a/libkern/c++/OSObject.cpp
++++ b/libkern/c++/OSObject.cpp
+@@ -35,6 +35,21 @@
+ #include <libkern/OSDebug.h>
+ #include <libkern/c++/OSCPPDebug.h>
+ #include <IOKit/IOKitDebug.h>
++
++/*
++ * nuwa bring-up: the iOS 16 donor kernelcache exports _IORPCMessageFromMach and a few of its kexts
++ * bind to it by name. This kernel build does not emit that symbol, so kits/NativePrelink cannot
++ * rebind those references and the whole payload fails to link. Provide the definition the donor
++ * kexts expect. Callers treat a null result as kIOReturnIPCError, so the unimplemented DriverKit
++ * RPC path degrades into a clean error instead of blocking the boot.
++ */
++extern "C" void *
++IORPCMessageFromMach(void * msg, bool reply)
++{
++	(void)msg;
++	(void)reply;
++	return nullptr;
++}
+ #include <libkern/OSAtomic.h>
+ 
+ #include <libkern/c++/OSCollection.h>
