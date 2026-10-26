@@ -201,6 +201,17 @@ UniXNURun (
   // Grab the kernel's stage bars before UniXNUUiInit switches the mode and
   // paints over them.
   //
+  //
+  // Dump the breadcrumb words raw: this lands in the scrollback next to the
+  // DARWINBOOT lines, so it is visible even if the menu footer is cut off.
+  //
+  {
+    volatile UINT64  *N = (volatile UINT64 *)(UINTN)0x8d3003000ULL;
+
+    Print (L"UNIXNU: note %lx %lx %lx %lx  (magic %lx)\n",
+           (UINT64)N[0], (UINT64)N[1], (UINT64)N[2], (UINT64)N[3],
+           (UINT64)0x4e4f5445ULL);
+  }
   KernelStages = ReadKernelStageMask ();
 
   UniXNUUiInit (&Config, &Ui);
@@ -215,11 +226,13 @@ UniXNURun (
   UnicodeSPrint (
     Ui.Info,
     sizeof (Ui.Info),
-    L"drivers %u loaded / %u failed    kits %u    acpi %u",
+    L"drv %u/%u kits %u acpi %u   note1 %lx ckpt %lx",
     (UINT32)Stats.DriversLoaded,
     (UINT32)Stats.DriversFailed,
     (UINT32)Config.KitsLoaded,
-    (UINT32)Stats.AcpiInstalled
+    (UINT32)Stats.AcpiInstalled,
+    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[1],
+    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[2]
     );
 
   Countdown = TRUE;
