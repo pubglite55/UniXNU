@@ -223,16 +223,19 @@ UniXNURun (
                    L"no kernel stage bars found (kernel died before arm_init)");
   }
   Print (L"UNIXNU: kernel stage mask 0x%x\n", KernelStages);
+  //
+  // Breadcrumb page shared with DarwinBoot and the kernel:
+  //   [0] magic 'ETON', [1] arm_init stage mask, [2] start.s checkpoint,
+  //   [3] SCTLR_EL1 the kernel was entered with, [4] physical entry point.
+  //
   UnicodeSPrint (
     Ui.Info,
     sizeof (Ui.Info),
-    L"drv %u/%u kits %u acpi %u   note1 %lx ckpt %lx",
-    (UINT32)Stats.DriversLoaded,
-    (UINT32)Stats.DriversFailed,
-    (UINT32)Config.KitsLoaded,
-    (UINT32)Stats.AcpiInstalled,
+    L"n1 %lx ck %lx sctlr %lx ent %lx",
     (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[1],
-    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[2]
+    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[2],
+    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[3],
+    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[4]
     );
 
   Countdown = TRUE;
