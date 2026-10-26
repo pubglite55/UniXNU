@@ -76,8 +76,23 @@ ReadKernelStageMask (
   {
     volatile UINT64  *Note = (volatile UINT64 *)(UINTN)0x8d3003000ULL;
 
-    if ((Note[0] == 0x4e4f5445ULL) && (Note[1] != 0)) {
-      return (UINT32)Note[1];
+    //
+    // Note[1]: arm_init stages recorded by sweet_early_mark (0119).
+    // Note[2]: start.s checkpoint recorded by the NUWA_BREADCRUMB macro (0120),
+    //          0 = never entered start_first_cpu, 1 = entry, 3 = boot args read,
+    //          5 = bootstrap page tables built, 6 = MMU enabled.
+    //
+    if (Note[0] == 0x4e4f5445ULL) {
+      UINT32  StartCkpt = (UINT32)Note[2];
+      UINT32  Stages    = (UINT32)Note[1];
+
+      if ((StartCkpt != 0) || (Stages != 0)) {
+        //
+        // Fold the start.s checkpoint into the high half so one number carries
+        // both facts: bits 32+ = checkpoint, low bits = arm_init stage mask.
+        //
+        return (UINT32)((Stages != 0) ? Stages : (0x40000000u | StartCkpt));
+      }
     }
   }
 
