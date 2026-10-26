@@ -52,19 +52,26 @@ def check_native_root(kernel, arguments):
         raise Error('the native UFS root kernel lacks the linked sheng PMGR integration')
 
 
-def write_volume(stage, image, label, size_mib):
+def write_volume(stage, image, label, size_mib, sector_bytes=4096):
     for tool_name in ('mformat', 'mcopy'):
         tool(tool_name, 'brew install mtools')
     image.unlink(missing_ok=True)
     env = dict(os.environ, MTOOLS_SKIP_CHECK='1', TZ='UTC')
-    # The volume also has to be publishable from a UFS partition, where the
-    # block device reports 4096-byte logical blocks. A 512-byte FAT cannot be
-    # parsed through such a BlockIo, so record 4 KiB sectors in the BPB.
+    # The BPB sector size must match what the consumer's BlockIo reports.
+    #
+    # A UFS-backed publication (NativeUfs, A track) exposes 4096-byte logical
+    # blocks, so that path needs `-M 4096`.
+    #
+    # The boot image ramdisk (B track) is a plain memory range published by
+    # ShengBootMemoryDxe, whose BlockIo is 512 bytes. Its FindPayload() walk
+    # only accepts a BPB with SectorSize == 512, so a 4 KiB BPB makes the
+    # firmware miss the payload completely and BDS then reports
+    # "Failed to Find an Operating System!". board.toml [payload]
+    # fat_sector_bytes selects the value; 4096 remains the default.
+    #
     # -M is the soft (logical) sector size, which is what lands in the BPB.
-    # With 4 KiB sectors this image has 48,128 clusters, below the 65,525 that
-    # FAT32 requires, so let mformat pick the FAT width (FAT16 here).
-    sectors = size_mib * 256
-    run(['mformat', '-C', '-M', '4096', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
+    sectors = size_mib * 1024 * 1024 // sector_bytes
+    run(['mformat', '-C', '-M', str(sector_bytes), '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
     for entry in sorted(stage.iterdir()):
         run(['mcopy', '-i', image, '-s', '-Q', '-m', entry, '::/'], env=env, capture=True)
 
@@ -169,7 +176,8 @@ def build(ctx, kernel=None):
     content = sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
     if content > size * 1024 * 1024 * 0.95:
         raise Error(f'the payload files take {content >> 20} MiB; raise size_mib (now {size}) in board.toml [payload]')
-    write_volume(stage, image, spec.get('volume', 'UNIXNU')[:11], size)
+    write_volume(stage, image, spec.get('volume', 'UNIXNU')[:11], size,
+                 int(spec.get('fat_sector_bytes', 4096)))
     data_report = {'kernel_sha256': sha256_file(kernel), 'payload_kernel_sha256': sha256_file(payloads / 'kernel.macho'),
                    'adt_sha256': sha256_file(payloads / 'kernel.macho.adt'), 'kernel_args': line,
                    'trust_cache_sha256': sha256_file(trust) if trust else None,
