@@ -94,6 +94,14 @@ UniXNURun (
     (UINT32)Config.KitsSkipped
     );
 
+  //
+  // Bring-up diagnostics: ConOut, so they show on the panel even with no
+  // serial port wired (nuwa has none).
+  //
+  Print (L"UNIXNU: cfg entries=%u drivers=%u patches=%u kits=%u/%u\n",
+         (UINT32)Config.EntryCount, (UINT32)Config.DriverCount, (UINT32)Config.PatchCount,
+         (UINT32)Config.KitsLoaded, (UINT32)Config.KitsSkipped);
+
   UniXNUPublishSlices (&Config);
 
   //
@@ -118,6 +126,11 @@ UniXNURun (
   Countdown = TRUE;
   for ( ; ;) {
     Index  = UniXNUMenuRun (&Ui, &Config, Countdown);
+    Print (L"UNIXNU: menu picked %u of %u\n", (UINT32)Index, (UINT32)Config.EntryCount);
+    if ((Config.EntryCount == 0) || (Index >= Config.EntryCount)) {
+      Print (L"UNIXNU: entry index out of range - stopping\n");
+      return EFI_NOT_FOUND;
+    }
     Entry  = &Config.Entries[Index];
     BootCopy = *Entry;
     if (Entry->Confirm != NULL) {
@@ -146,6 +159,7 @@ UniXNURun (
     }
 
     Status = UniXNUBootEntry (ImageHandle, &Config, &BootCopy);
+    Print (L"UNIXNU: boot entry -> %r\n", Status);
     if ((Entry->Type == UniXNUEntryAction) && (Entry->Action == UniXNUActionExit)) {
       return EFI_SUCCESS;
     }

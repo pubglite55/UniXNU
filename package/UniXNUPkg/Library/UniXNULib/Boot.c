@@ -56,6 +56,7 @@ RunXnu (
   UINTN                         KextCount;
 
   Status = gBS->LocateProtocol (&gUniXNULoaderProtocolGuid, NULL, (VOID **)&Loader);
+  Print (L"UNIXNU: loader protocol -> %r\n", Status);
   if (EFI_ERROR (Status)) {
     UniXNULog ("xnu: no loader protocol installed; UniXNU does not provide one");
     return EFI_UNSUPPORTED;
@@ -90,7 +91,9 @@ RunXnu (
   Request.Kexts          = Kexts;
   Request.KextCount      = KextCount;
   UniXNULog ("xnu: handing off %u staged kext(s) to loader", (UINT32)KextCount);
+  Print (L"UNIXNU: calling Loader->Boot\n");
   Status = Loader->Boot (Loader, &Request);
+  Print (L"UNIXNU: Loader->Boot -> %r\n", Status);
   UniXNUFreeKexts (Kexts, KextCount);
   return Status;
 }
