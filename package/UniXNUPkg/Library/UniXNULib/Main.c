@@ -74,7 +74,7 @@ ReadKernelStageMask (
   // It survives fbcon clearing the screen and the reset, unlike the bars.
   //
   {
-    volatile UINT64  *Note = (volatile UINT64 *)(UINTN)0x8d0004000ULL;
+    volatile UINT64  *Note = (volatile UINT64 *)(UINTN)0x8d3003000ULL;
 
     if ((Note[0] == 0x4e4f5445ULL) && (Note[1] != 0)) {
       return (UINT32)Note[1];
