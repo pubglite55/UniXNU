@@ -9,7 +9,9 @@
 	url = https://github.com/UniXNU/ArmVirtPlatform.git
 [submodule "drivers/DarwinBoot"]
 	path = drivers/DarwinBoot
-	url = https://github.com/UniXNU/DarwinBoot.git
+	# Our fork: xnu-8796 uses the older boot_args ABI (Boot_Video = six uint32,
+	# BOOT_LINE_LENGTH 608), which upstream describes as the Darwin 23 one.
+	url = https://github.com/pubglite55/DarwinBoot.git
 [submodule "drivers/NativeAES"]
 	path = drivers/NativeAES
 	url = https://github.com/UniXNU/NativeAES.git
