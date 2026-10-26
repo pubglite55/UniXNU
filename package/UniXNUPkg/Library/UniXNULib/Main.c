@@ -46,6 +46,63 @@ UniXNULog (
   }
 }
 
+//
+// The kernel paints one 48x32 bar per arm_init stage along the bottom of the
+// framebuffer (sweet_early.c). Those pixels survive a crash and the reset, so
+// reading them tells us how far the last boot actually got -- which is the one
+// thing a screen full of UniXNU menu cannot show.
+//
+// Bar geometry must match sweet_early.c: x in [stage*48, stage*48+48),
+// y in [height-32, height), colour 0xff00ff00 | ((stage & 7) * 32 << 16).
+//
+STATIC UINT32
+ReadKernelStageMask (
+  VOID
+  )
+{
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  EFI_STATUS                    Status;
+  volatile UINT32               *Fb;
+  UINT32                        Width;
+  UINT32                        Height;
+  UINT32                        Stride;
+  UINT32                        Stage;
+  UINT32                        Mask;
+
+  Status = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **)&Gop);
+  if (EFI_ERROR (Status)) {
+    Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&Gop);
+  }
+  if (EFI_ERROR (Status) || (Gop->Mode == NULL) || (Gop->Mode->Info == NULL)) {
+    return 0;
+  }
+
+  Width  = Gop->Mode->Info->HorizontalResolution;
+  Height = Gop->Mode->Info->VerticalResolution;
+  Stride = Gop->Mode->Info->PixelsPerScanLine;
+  if ((Height < 3200) || (Stride < Width) || (Gop->Mode->FrameBufferBase == 0)) {
+    return 0;
+  }
+
+  Fb   = (volatile UINT32 *)(UINTN)Gop->Mode->FrameBufferBase;
+  Mask = 0;
+  for (Stage = 1; Stage <= 20; Stage++) {
+    UINT64  X = (UINT64)Stage * 48 + 24;
+    UINT32  Expect = 0xff00ff00u | ((Stage & 7u) * 32u << 16);
+    UINT32  Pixel;
+
+    if (X >= Width) {
+      continue;
+    }
+    Pixel = Fb[(UINT64)(Height - 16) * Stride + X];
+    if ((Pixel & 0xffffff00u) == (Expect & 0xffffff00u)) {
+      Mask |= (1u << Stage);
+    }
+  }
+
+  return Mask;
+}
+
 EFI_STATUS
 EFIAPI
 UniXNURun (
@@ -61,6 +118,7 @@ UniXNURun (
   BOOLEAN          Countdown;
   UNIXNU_ENTRY         *Entry;
   UNIXNU_ENTRY         BootCopy;
+  UINT32               KernelStages;
 
   //
   // A boot manager waits for people; the 5 minute BDS watchdog does not.
@@ -112,7 +170,21 @@ UniXNURun (
   UniXNUInjectDrivers (ImageHandle, &Config, &Stats);
   UniXNUInjectAcpi (&Config, &Stats);
 
+  //
+  // Grab the kernel's stage bars before UniXNUUiInit switches the mode and
+  // paints over them.
+  //
+  KernelStages = ReadKernelStageMask ();
+
   UniXNUUiInit (&Config, &Ui);
+  if (KernelStages != 0) {
+    UnicodeSPrint (Ui.Notice, sizeof (Ui.Notice),
+                   L"last kernel boot reached stage mask 0x%x", KernelStages);
+  } else {
+    UnicodeSPrint (Ui.Notice, sizeof (Ui.Notice),
+                   L"no kernel stage bars found (kernel died before arm_init)");
+  }
+  Print (L"UNIXNU: kernel stage mask 0x%x\n", KernelStages);
   UnicodeSPrint (
     Ui.Info,
     sizeof (Ui.Info),
