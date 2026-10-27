@@ -231,11 +231,12 @@ UniXNURun (
   UnicodeSPrint (
     Ui.Info,
     sizeof (Ui.Info),
-    L"n1 %lx ck %lx sctlr %lx ent %lx",
-    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[1],
-    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[2],
-    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[3],
-    (UINT64)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[4]
+    L"n1 %x ck %x ld %x sc %x ent %x",
+    (UINT32)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[1],
+    (UINT32)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[2],
+    (UINT32)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[5],
+    (UINT32)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[3],
+    (UINT32)((volatile UINT64 *)(UINTN)0x8d3003000ULL)[4]
     );
 
   Countdown = TRUE;
